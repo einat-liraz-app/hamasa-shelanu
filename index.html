@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>MyBody - יומן תזונה חכם</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #4f46e5; --accent: #f43f5e; }
+        body { font-family: 'Assistant', sans-serif; background-color: #f8fafc; -webkit-tap-highlight-color: transparent; }
+        .glass-header { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+        .meal-card { transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .custom-shadow { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05); }
+        @keyframes popIn { 0% { opacity: 0; transform: scale(0.95); } 100% { opacity: 1; transform: scale(1); } }
+        .animate-pop { animation: popIn 0.25s ease-out forwards; }
+        .suggestion-item { cursor: pointer; transition: background 0.2s; }
+        .suggestion-item:hover { background-color: #f1f5f9; }
+    </style>
+</head>
+<body class="pb-20">
+
+    <!-- Header -->
+    <header class="glass-header sticky top-0 z-30 border-b border-slate-100">
+        <div class="max-w-md mx-auto px-5 py-4">
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <h1 class="text-2xl font-black text-slate-800 tracking-tight">MyBody חכם ✨</h1>
+                    <p id="current-day-name" class="text-xs text-slate-400 font-bold uppercase"></p>
+                </div>
+                <div class="flex items-center bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
+                    <input type="date" id="date-picker" onchange="changeDate()" class="bg-transparent border-none text-xs font-bold text-slate-600 outline-none">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3">
+                <div class="bg-white p-3 rounded-2xl custom-shadow text-center">
+                    <span class="block text-[10px] font-bold text-slate-400 mb-1">קלוריות</span>
+                    <span id="total-calories" class="text-lg font-black text-indigo-600">0</span>
+                </div>
+                <div class="bg-white p-3 rounded-2xl custom-shadow text-center">
+                    <span class="block text-[10px] font-bold text-slate-400 mb-1">חלבון</span>
+                    <span id="total-protein" class="text-lg font-black text-rose-500">0</span>
+                </div>
+                <div onclick="toggleWeightInput()" class="bg-white p-3 rounded-2xl custom-shadow text-center cursor-pointer">
+                    <span class="block text-[10px] font-bold text-slate-400 mb-1">משקל</span>
+                    <span id="display-weight" class="text-lg font-black text-emerald-500">0</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-md mx-auto p-4 space-y-6">
+        
+        <!-- Navigation Tabs -->
+        <div class="flex bg-slate-200 p-1 rounded-xl">
+            <button onclick="switchTab('diary')" id="tab-diary" class="flex-1 py-2 text-sm font-bold rounded-lg bg-white text-slate-800 shadow-sm transition-all">יומן יומי</button>
+            <button onclick="switchTab('foods')" id="tab-foods" class="flex-1 py-2 text-sm font-bold rounded-lg text-slate-500 transition-all">בנק מאכלים</button>
+        </div>
+
+        <!-- Diary Tab -->
+        <div id="view-diary" class="space-y-6">
+            <!-- Water -->
+            <section class="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-[2rem] p-5 text-white shadow-xl shadow-blue-100 relative overflow-hidden">
+                <div class="relative z-10 flex justify-between items-center">
+                    <div>
+                        <h2 class="font-extrabold text-lg flex items-center gap-2"><span>💧</span> מים</h2>
+                        <p class="text-blue-100 text-xs">יעד: 2.5 ליטר</p>
+                    </div>
+                    <div class="text-right">
+                        <span id="water-amount" class="text-3xl font-black">0</span><span class="text-sm opacity-70 ml-1">L</span>
+                    </div>
+                </div>
+                <div class="flex gap-2 mt-4 relative z-10">
+                    <button onclick="addWater(250)" class="flex-1 bg-white/20 py-2.5 rounded-xl text-xs font-bold">כוס</button>
+                    <button onclick="addWater(500)" class="flex-1 bg-white/20 py-2.5 rounded-xl text-xs font-bold">בקבוק</button>
+                    <button onclick="resetWater()" class="px-3 bg-red-400/20 rounded-xl">✖</button>
+                </div>
+            </section>
+
+            <!-- Weight Modal -->
+            <div id="weight-form" class="hidden animate-pop p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+                <div class="flex justify-between items-center mb-3">
+                    <span class="text-sm font-bold text-emerald-800">עדכון משקל</span>
+                    <button onclick="toggleWeightInput()" class="text-emerald-300">✕</button>
+                </div>
+                <div class="flex gap-2">
+                    <input id="input-weight" type="number" step="0.1" class="flex-1 p-3 rounded-xl border-none text-center font-black text-emerald-600 text-xl" placeholder="00.0">
+                    <button onclick="saveWeight()" class="bg-emerald-600 text-white px-6 rounded-xl font-bold">שמור</button>
+                </div>
+            </div>
+
+            <div id="meals-container" class="space-y-5"></div>
+        </div>
+
+        <!-- Foods Database Tab -->
+        <div id="view-foods" class="hidden animate-pop space-y-4">
+            <div class="bg-white p-5 rounded-3xl custom-shadow border border-slate-100">
+                <h3 class="font-black text-slate-800 mb-4 flex items-center gap-2"><span>📖</span> הוספת מאכל לבנק</h3>
+                <div class="space-y-3">
+                    <input id="db-name" placeholder="שם המאכל (לדוגמה: יוגורט חלבון)" class="w-full p-3 bg-slate-50 rounded-xl text-right outline-none border border-slate-100">
+                    <div class="grid grid-cols-3 gap-2">
+                        <input id="db-cal" type="number" placeholder="קלוריות" class="p-3 bg-slate-50 rounded-xl text-center outline-none border border-slate-100 text-sm">
+                        <input id="db-pr" type="number" placeholder="חלבון" class="p-3 bg-slate-50 rounded-xl text-center outline-none border border-slate-100 text-sm">
+                        <input id="db-cr" type="number" placeholder="פחמימה" class="p-3 bg-slate-50 rounded-xl text-center outline-none border border-slate-100 text-sm">
+                    </div>
+                    <button onclick="addToFoodDB()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-indigo-100">שמור בבנק</button>
+                </div>
+            </div>
+            
+            <div id="db-list" class="space-y-2">
+                <!-- Food DB items -->
+            </div>
+        </div>
+
+        <div class="pt-8 pb-12 text-center">
+            <button onclick="clearAllData()" class="text-xs font-bold text-slate-300 uppercase tracking-widest">איפוס מערכת</button>
+        </div>
+    </main>
+
+    <!-- Success Toast -->
+    <div id="save-popup" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white px-6 py-3 rounded-full text-xs font-bold shadow-2xl z-50">
+        הנתונים נשמרו ✨
+    </div>
+
+    <script>
+        const mealsConfig = [
+            { id: 'breakfast', name: 'ארוחת בוקר', icon: '🍳', color: 'indigo', targets: { cal: 281, prot: 140, carb: 113 } },
+            { id: 'lunch', name: 'ארוחת צהריים', icon: '🥗', color: 'orange', targets: { cal: 550, prot: 330, carb: 163 } },
+            { id: 'snack', name: 'ארוחת ביניים', icon: '🍎', color: 'rose', targets: { cal: 150, prot: 20, carb: 20 } },
+            { id: 'dinner', name: 'ארוחת ערב', icon: '🍗', color: 'emerald', targets: { cal: 361, prot: 240, carb: 95 } }
+        ];
+
+        let dailyData = JSON.parse(localStorage.getItem('nutrition_daily_data')) || {};
+        let foodDB = JSON.parse(localStorage.getItem('nutrition_food_db')) || [
+            { name: "ביצה קשה", cal: 78, pr: 6, cr: 0.6 },
+            { name: "יוגורט חלבון 20ג", cal: 120, pr: 20, cr: 5 },
+            { name: "חזה עוף (100ג)", cal: 165, pr: 31, cr: 0 }
+        ];
+        
+        let currentDate = new Date().toISOString().split('T')[0];
+        document.getElementById('date-picker').value = currentDate;
+
+        function getDayData() {
+            if (!dailyData[currentDate]) dailyData[currentDate] = { entries: [], waterML: 0, weight: "0" };
+            return dailyData[currentDate];
+        }
+
+        function saveData() {
+            localStorage.setItem('nutrition_daily_data', JSON.stringify(dailyData));
+            localStorage.setItem('nutrition_food_db', JSON.stringify(foodDB));
+            showToast();
+        }
+
+        function showToast() {
+            const popup = document.getElementById('save-popup');
+            popup.classList.remove('hidden');
+            setTimeout(() => popup.classList.add('hidden'), 2000);
+        }
+
+        window.switchTab = (tab) => {
+            const isDiary = tab === 'diary';
+            document.getElementById('view-diary').classList.toggle('hidden', !isDiary);
+            document.getElementById('view-foods').classList.toggle('hidden', isDiary);
+            document.getElementById('tab-diary').className = isDiary ? "flex-1 py-2 text-sm font-bold rounded-lg bg-white text-slate-800 shadow-sm" : "flex-1 py-2 text-sm font-bold rounded-lg text-slate-500";
+            document.getElementById('tab-foods').className = !isDiary ? "flex-1 py-2 text-sm font-bold rounded-lg bg-white text-slate-800 shadow-sm" : "flex-1 py-2 text-sm font-bold rounded-lg text-slate-500";
+            if(!isDiary) renderFoodDB();
+        };
+
+        window.changeDate = () => {
+            currentDate = document.getElementById('date-picker').value;
+            renderApp();
+        };
+
+        window.toggleWeightInput = () => document.getElementById('weight-form').classList.toggle('hidden');
+
+        window.saveWeight = () => {
+            const val = document.getElementById('input-weight').value;
+            if (val > 0) { getDayData().weight = val; saveData(); renderApp(); toggleWeightInput(); }
+        };
+
+        // Food DB Logic
+        window.addToFoodDB = () => {
+            const name = document.getElementById('db-name').value;
+            const cal = document.getElementById('db-cal').value;
+            const pr = document.getElementById('db-pr').value;
+            const cr = document.getElementById('db-cr').value;
+            if (!name) return;
+            foodDB.push({ name, cal: Number(cal)||0, pr: Number(pr)||0, cr: Number(cr)||0 });
+            saveData();
+            renderFoodDB();
+            document.getElementById('db-name').value = '';
+            document.getElementById('db-cal').value = '';
+            document.getElementById('db-pr').value = '';
+            document.getElementById('db-cr').value = '';
+        };
+
+        function renderFoodDB() {
+            const list = document.getElementById('db-list');
+            list.innerHTML = '<h4 class="text-xs font-bold text-slate-400 px-2 mb-2">מאכלים שמורים בבנק</h4>';
+            foodDB.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = "bg-white p-4 rounded-2xl flex justify-between items-center custom-shadow border border-slate-50";
+                div.innerHTML = `
+                    <button onclick="deleteFromDB(${index})" class="text-slate-200 hover:text-red-400">🗑️</button>
+                    <div class="text-right">
+                        <div class="font-bold text-slate-700 text-sm">${item.name}</div>
+                        <div class="text-[10px] text-slate-400">${item.cal} קל׳ | ${item.pr}ח׳ | ${item.cr}פ׳</div>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        window.deleteFromDB = (index) => {
+            foodDB.splice(index, 1);
+            saveData();
+            renderFoodDB();
+        };
+
+        function handleSearch(mealId, query) {
+            const suggestionsDiv = document.getElementById(`suggestions-${mealId}`);
+            if (!query) { suggestionsDiv.innerHTML = ''; return; }
+            
+            const matches = foodDB.filter(f => f.name.includes(query)).slice(0, 4);
+            suggestionsDiv.innerHTML = matches.map(m => `
+                <div onclick="selectFood('${mealId}', '${m.name}', ${m.cal}, ${m.pr}, ${m.cr})" class="suggestion-item p-3 text-right text-xs border-b border-slate-50 last:border-0 font-bold text-slate-600">
+                    ${m.name} <span class="text-[10px] font-normal text-slate-400">(${m.cal} קל׳)</span>
+                </div>
+            `).join('');
+        }
+
+        window.selectFood = (mealId, name, cal, pr, cr) => {
+            document.getElementById(`in-name-${mealId}`).value = name;
+            document.getElementById(`in-ca-${mealId}`).value = cal;
+            document.getElementById(`in-pr-${mealId}`).value = pr;
+            document.getElementById(`in-cr-${mealId}`).value = cr;
+            document.getElementById(`suggestions-${mealId}`).innerHTML = '';
+        };
+
+        function renderApp() {
+            const data = getDayData();
+            const container = document.getElementById('meals-container');
+            container.innerHTML = '';
+            
+            const d = new Date(currentDate);
+            document.getElementById('current-day-name').innerText = d.toLocaleDateString('he-IL', { weekday: 'long', month: 'long', day: 'numeric' });
+
+            let dayCal = 0, dayProt = 0;
+
+            mealsConfig.forEach(meal => {
+                const entries = data.entries.filter(e => e.mealId === meal.id);
+                const mealCal = entries.reduce((s, e) => s + Number(e.calories), 0);
+                const mealProt = entries.reduce((s, e) => s + Number(e.protein), 0);
+                const mealCarb = entries.reduce((s, e) => s + Number(e.carbs), 0);
+                dayCal += mealCal; dayProt += mealProt;
+
+                const card = document.createElement('div');
+                card.className = `bg-white rounded-[2rem] overflow-hidden custom-shadow border border-slate-50 animate-pop`;
+                card.innerHTML = `
+                    <div class="p-5">
+                        <div class="flex justify-between items-start mb-4">
+                            <button onclick="showAddForm('${meal.id}')" class="w-10 h-10 bg-${meal.color}-50 text-${meal.color}-600 rounded-2xl flex items-center justify-center text-lg">➕</button>
+                            <div class="text-right">
+                                <h3 class="font-extrabold text-slate-800 text-lg">${meal.name} ${meal.icon}</h3>
+                                <div class="text-[10px] font-bold text-slate-400 mt-0.5">יעד: ${meal.targets.cal} קל׳ | ${meal.targets.prot}ח׳</div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2 mb-4">
+                            <div class="bg-slate-50 p-2 rounded-xl text-center"><span class="block text-[8px] font-bold text-slate-400">קלוריות</span><span class="text-xs font-black ${mealCal > meal.targets.cal ? 'text-red-500' : 'text-slate-700'}">${mealCal}</span></div>
+                            <div class="bg-slate-50 p-2 rounded-xl text-center"><span class="block text-[8px] font-bold text-slate-400">חלבון</span><span class="text-xs font-black text-slate-700">${mealProt}</span></div>
+                            <div class="bg-slate-50 p-2 rounded-xl text-center"><span class="block text-[8px] font-bold text-slate-400">פחמימה</span><span class="text-xs font-black text-slate-700">${mealCarb}</span></div>
+                        </div>
+
+                        <div class="space-y-2">
+                            ${entries.map(e => `
+                                <div class="flex items-center justify-between py-2 border-t border-slate-50">
+                                    <button onclick="deleteEntry(${e.id})" class="text-slate-200 text-xs">🗑️</button>
+                                    <div class="text-right">
+                                        <div class="text-sm font-bold text-slate-700">${e.name}</div>
+                                        <div class="text-[9px] text-slate-400">${e.amount}ג׳ • ${e.calories} קל׳</div>
+                                    </div>
+                                </div>
+                            `).join('') || '<p class="text-[10px] text-center text-slate-300 italic py-2">הוסיפי משהו...</p>'}
+                        </div>
+
+                        <div id="form-${meal.id}" class="hidden mt-4 pt-4 border-t border-dashed border-slate-200 space-y-3 relative">
+                            <input id="in-name-${meal.id}" oninput="handleSearch('${meal.id}', this.value)" placeholder="חפשי מאכל או הקלידי..." class="w-full p-3 bg-slate-50 rounded-xl text-right text-sm outline-none border border-slate-100">
+                            <div id="suggestions-${meal.id}" class="absolute w-full bg-white z-20 rounded-xl shadow-xl mt-1 overflow-hidden"></div>
+                            <div class="grid grid-cols-4 gap-2">
+                                <input id="in-am-${meal.id}" type="number" placeholder="כמות" class="p-2 bg-slate-50 rounded-xl text-center text-xs outline-none">
+                                <input id="in-ca-${meal.id}" type="number" placeholder="קל׳" class="p-2 bg-slate-50 rounded-xl text-center text-xs outline-none">
+                                <input id="in-pr-${meal.id}" type="number" placeholder="ח׳" class="p-2 bg-slate-50 rounded-xl text-center text-xs outline-none">
+                                <input id="in-cr-${meal.id}" type="number" placeholder="פ׳" class="p-2 bg-slate-50 rounded-xl text-center text-xs outline-none">
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="saveEntry('${meal.id}')" class="flex-1 bg-${meal.color}-500 text-white py-3 rounded-xl font-bold text-sm shadow-lg shadow-${meal.color}-100">הוספה</button>
+                                <button onclick="hideAddForm('${meal.id}')" class="px-4 text-slate-400 text-xs">ביטול</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            document.getElementById('total-calories').innerText = dayCal;
+            document.getElementById('total-protein').innerText = dayProt;
+            document.getElementById('display-weight').innerText = data.weight;
+            document.getElementById('water-amount').innerText = (data.waterML / 1000).toFixed(1);
+        }
+
+        window.showAddForm = (id) => document.getElementById(`form-${id}`).classList.remove('hidden');
+        window.hideAddForm = (id) => { document.getElementById(`form-${id}`).classList.add('hidden'); document.getElementById(`suggestions-${id}`).innerHTML = ''; };
+
+        window.saveEntry = (mealId) => {
+            const data = getDayData();
+            const name = document.getElementById(`in-name-${mealId}`).value;
+            if (!name) return;
+            data.entries.push({
+                id: Date.now(), mealId, name,
+                amount: document.getElementById(`in-am-${mealId}`).value || 0,
+                calories: document.getElementById(`in-ca-${mealId}`).value || 0,
+                protein: document.getElementById(`in-pr-${mealId}`).value || 0,
+                carbs: document.getElementById(`in-cr-${mealId}`).value || 0
+            });
+            saveData(); renderApp();
+        };
+
+        window.deleteEntry = (id) => { getDayData().entries = getDayData().entries.filter(e => e.id !== id); saveData(); renderApp(); };
+        window.addWater = (ml) => { getDayData().waterML += ml; saveData(); renderApp(); };
+        window.resetWater = () => { if(confirm('לאפס מים?')) { getDayData().waterML = 0; saveData(); renderApp(); } };
+        window.clearAllData = () => { if(confirm('מחיקת כל ההיסטוריה?')) { dailyData = {}; foodDB = []; saveData(); renderApp(); } };
+
+        renderApp();
+    </script>
+</body>
+</html>
